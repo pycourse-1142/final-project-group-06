@@ -1,105 +1,84 @@
-"""
-main.py
+# main.py
+# 空氣品質分析主程式（月平均值格式）
+import sys
+from parser     import parse_air_quality_file
+from analyzer   import (summarize_records, print_summary,
+                        find_worst_months_pm25, find_worst_months_pm10,
+                        seasonal_average)
+from visualizer import (plot_monthly_trend, plot_pm25_bar,
+                        plot_pm10_bar, plot_seasonal_bar)
 
-空氣品質分析專題規劃
-
-==============================
-【資料來源】
-==============================
-
-使用環境部空氣品質監測資料：
-https://airtw.moenv.gov.tw/cht/Query/DataDownload.aspx
-
-資料格式：
-1. CSV 原始資料
-2. 可重現下載
-3. 檔案大小小於 50 MB
-
-預計使用資料：
-- AQI
-- PM2.5
-- PM10
-- CO
-- O3
+# ── 可調整參數 ────────────────────────────────────────────
+INPUT_FILE    = "data/air_quality.csv"
+OUTPUT_FOLDER = "figures"
+TOP_N         = 3    # 顯示最差前幾個月
+# ─────────────────────────────────────────────────────────
 
 
-==============================
-【專題主要問題】
-==============================
+def main():
+    # ── 讀取資料 ─────────────────────────────────────────
+    try:
+        records, site = parse_air_quality_file(INPUT_FILE)
+    except FileNotFoundError as e:
+        print(e)
+        print("請將 CSV 放到 data/air_quality.csv 後重新執行")
+        sys.exit(1)
+    except Exception as e:
+        print(f"資料讀取失敗：{e}")
+        sys.exit(1)
 
-1. 哪些地區空氣品質最差？
-   - 分析各測站 AQI 平均值
-   - 找出 AQI Top 5 測站
-   - 找出 PM2.5 Top 5 測站
+    if not records:
+        print("沒有有效資料，程式結束")
+        return
 
-2. 不同地區的污染差異
-   - 北部 / 中部 / 南部 / 東部
-   - 比較各區 AQI 與 PM2.5
+    # ── 統計分析 ─────────────────────────────────────────
+    summary = summarize_records(records)
+    print_summary(summary, site)
+
+    # PM2.5 最差月份
+    worst_pm25 = find_worst_months_pm25(records, top_n=TOP_N)
+    print(f"\nPM2.5 最高 Top {TOP_N} 月份：")
+    for i, r in enumerate(worst_pm25, 1):
+        print(f"  {i}. {r['date']}  PM2.5：{r['pm25']:.1f} μg/m³")
+
+    # PM10 最差月份
+    worst_pm10 = find_worst_months_pm10(records, top_n=TOP_N)
+    print(f"\nPM10 最高 Top {TOP_N} 月份：")
+    for i, r in enumerate(worst_pm10, 1):
+        print(f"  {i}. {r['date']}  PM10：{r['pm10']:.1f} μg/m³")
+
+    # 四季分析
+    seasonal = seasonal_average(records)
+    print("\n四季平均：")
+    for season, data in seasonal.items():
+        pm25 = f"{data['avg_pm25']:.1f}" if data["avg_pm25"] is not None else "N/A"
+        pm10 = f"{data['avg_pm10']:.1f}" if data["avg_pm10"] is not None else "N/A"
+        print(f"  {season}：PM2.5={pm25}  PM10={pm10}")
+
+    # ── 畫圖輸出 ─────────────────────────────────────────
+    print("\n開始繪圖...")
+    try:
+        plot_monthly_trend(records, site)
+    except Exception as e:
+        print(f"圖 1 失敗：{e}")
+
+    try:
+        plot_pm25_bar(records, site)
+    except Exception as e:
+        print(f"圖 2 失敗：{e}")
+
+    try:
+        plot_pm10_bar(records, site)
+    except Exception as e:
+        print(f"圖 3 失敗：{e}")
+
+    try:
+        plot_seasonal_bar(seasonal, site)
+    except Exception as e:
+        print(f"圖 4 失敗：{e}")
+
+    print("\n所有分析完成，圖片已輸出至 figures/")
 
 
-==============================
-【專題次要問題】
-==============================
-
-1. 缺失資料處理
-   - 空值處理
-   - 維修中測站過濾
-   - 異常值過濾
-
-2. 地區分類
-   - 使用縣市欄位進行分群
-   - 統計不同地區平均 AQI
-
-3. 污染物關聯分析
-   - PM2.5 與 AQI 關係
-   - O3 與 AQI 關係
-
-
-==============================
-【統計圖規劃】
-==============================
-
-圖 1：
-AQI Top 10 測站長條圖
-用途：
-找出污染最嚴重測站
-
-圖 2：
-PM2.5 時間變化折線圖
-用途：
-觀察污染變化趨勢
-
-圖 3：
-各縣市 AQI 箱型圖
-用途：
-比較不同地區污染分布
-
-圖 4：
-PM2.5 與 AQI 散點圖
-用途：
-分析污染物相關性
-
-
-==============================
-【模組化規劃】
-==============================
-
-parser.py
-- 讀取 CSV
-- 清理資料
-- 處理空值
-
-analyzer.py
-- 統計分析
-- 排名計算
-- 平均值分析
-
-visualizer.py
-- 畫圖
-- 輸出 PNG 圖片
-
-main.py
-- 整合所有模組
-- 執行完整分析流程
-
-"""
+if __name__ == "__main__":
+    main()
