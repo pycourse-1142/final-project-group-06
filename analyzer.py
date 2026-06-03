@@ -1,98 +1,361 @@
 # analyzer.py
-# 統計分析模組（配合月平均值格式）
+# ==================================================
+# 統計分析模組
+#
+# 功能：
+# 1. 計算平均值
+# 2. 產生整體統計摘要
+# 3. 找出 PM2.5 最差月份
+# 4. 找出 PM10 最差月份
+# 5. 計算四季平均值
+# 6. 印出分析結果
+# ==================================================
 
 
+# ==================================================
+# 計算平均值
+#
+# 參數：
+# values -> 數值串列
+#
+# 回傳：
+# 平均值 或 None
+#
+# 範例：
+# [10,20,30]
+# -> 20
+#
+# [10,None,30]
+# -> 20
+# ==================================================
 def calculate_average(values):
-    """計算平均值（自動過濾 None）。"""
+
+    # 過濾 None
+    # 只保留有效數值
     valid = [v for v in values if v is not None]
+
+    # 若沒有任何有效資料
     if not valid:
+
+        # 回傳 None
         return None
+
+    # 計算平均值
     return sum(valid) / len(valid)
 
 
+# ==================================================
+# 整體統計分析
+#
+# 計算：
+# 1. 資料月份數
+# 2. PM2.5 平均值
+# 3. PM2.5 最大值
+# 4. PM2.5 最小值
+# 5. PM10 平均值
+# 6. PM10 最大值
+# 7. PM10 最小值
+#
+# 回傳 summary 字典
+# ==================================================
 def summarize_records(records):
-    """整體統計摘要。"""
+
+    # 若沒有資料
     if not records:
+
         return {}
 
-    pm25s = [r["pm25"] for r in records if r["pm25"] is not None]
-    pm10s = [r["pm10"] for r in records if r["pm10"] is not None]
+    # ==================================================
+    # 收集 PM2.5 資料
+    #
+    # 範例：
+    # [15,20,18,22]
+    # ==================================================
+    pm25s = [
+        r["pm25"]
+        for r in records
+        if r["pm25"] is not None
+    ]
 
+    # ==================================================
+    # 收集 PM10 資料
+    # ==================================================
+    pm10s = [
+        r["pm10"]
+        for r in records
+        if r["pm10"] is not None
+    ]
+
+    # 建立統計結果字典
     summary = {
+
+        # 總月份數
         "total_months": len(records),
     }
 
+    # ==================================================
+    # PM2.5 統計
+    # ==================================================
     if pm25s:
+
+        # 平均值
         summary["avg_pm25"] = sum(pm25s) / len(pm25s)
+
+        # 最大值
         summary["max_pm25"] = max(pm25s)
+
+        # 最小值
         summary["min_pm25"] = min(pm25s)
 
+    # ==================================================
+    # PM10 統計
+    # ==================================================
     if pm10s:
+
+        # 平均值
         summary["avg_pm10"] = sum(pm10s) / len(pm10s)
+
+        # 最大值
         summary["max_pm10"] = max(pm10s)
+
+        # 最小值
         summary["min_pm10"] = min(pm10s)
 
+    # 回傳統計結果
     return summary
 
 
+# ==================================================
+# 找出 PM2.5 最差月份
+#
+# 參數：
+# records
+# top_n
+#
+# 回傳：
+# PM2.5 最大的前 N 筆資料
+# ==================================================
 def find_worst_months_pm25(records, top_n=3):
-    """PM2.5 最高的前 N 個月。"""
-    valid = [r for r in records if r["pm25"] is not None]
-    sorted_r = sorted(valid, key=lambda x: x["pm25"], reverse=True)
+
+    # 只保留有 PM2.5 數值的資料
+    valid = [
+        r
+        for r in records
+        if r["pm25"] is not None
+    ]
+
+    # ==================================================
+    # 排序
+    #
+    # key=lambda x:x["pm25"]
+    # 代表依照 PM2.5 排序
+    #
+    # reverse=True
+    # 代表由大到小
+    # ==================================================
+    sorted_r = sorted(
+        valid,
+        key=lambda x: x["pm25"],
+        reverse=True
+    )
+
+    # 取前 top_n 筆
     return sorted_r[:top_n]
 
 
+# ==================================================
+# 找出 PM10 最差月份
+#
+# 邏輯與 PM2.5 相同
+# ==================================================
 def find_worst_months_pm10(records, top_n=3):
-    """PM10 最高的前 N 個月。"""
-    valid = [r for r in records if r["pm10"] is not None]
-    sorted_r = sorted(valid, key=lambda x: x["pm10"], reverse=True)
+
+    # 過濾無效資料
+    valid = [
+        r
+        for r in records
+        if r["pm10"] is not None
+    ]
+
+    # 依 PM10 大小排序
+    sorted_r = sorted(
+        valid,
+        key=lambda x: x["pm10"],
+        reverse=True
+    )
+
+    # 回傳前 N 名
     return sorted_r[:top_n]
 
 
+# ==================================================
+# 計算四季平均值
+#
+# 春：3~5月
+# 夏：6~8月
+# 秋：9~11月
+# 冬：12~2月
+#
+# 回傳：
+# {
+#   "春":{
+#      "avg_pm25":12.3,
+#      "avg_pm10":25.6
+#   }
+# }
+# ==================================================
 def seasonal_average(records):
-    """
-    計算四季平均（PM2.5 / PM10）。
-    春：3-5月  夏：6-8月  秋：9-11月  冬：12-2月
-    """
+
+    # ==================================================
+    # 月份與季節對照表
+    # ==================================================
     season_map = {
-        "01": "冬", "02": "冬", "03": "春",
-        "04": "春", "05": "春", "06": "夏",
-        "07": "夏", "08": "夏", "09": "秋",
-        "10": "秋", "11": "秋", "12": "冬",
+
+        "01": "冬",
+        "02": "冬",
+
+        "03": "春",
+        "04": "春",
+        "05": "春",
+
+        "06": "夏",
+        "07": "夏",
+        "08": "夏",
+
+        "09": "秋",
+        "10": "秋",
+        "11": "秋",
+
+        "12": "冬",
     }
 
-    seasonal = {"春": {"pm25": [], "pm10": []},
-                "夏": {"pm25": [], "pm10": []},
-                "秋": {"pm25": [], "pm10": []},
-                "冬": {"pm25": [], "pm10": []}}
+    # ==================================================
+    # 建立四季資料結構
+    # ==================================================
+    seasonal = {
 
-    for r in records:
-        month = r["date"].split("/")[-1]   # "2025/01" → "01"
-        season = season_map.get(month, "")
-        if not season:
-            continue
-        if r["pm25"] is not None:
-            seasonal[season]["pm25"].append(r["pm25"])
-        if r["pm10"] is not None:
-            seasonal[season]["pm10"].append(r["pm10"])
+        "春": {
+            "pm25": [],
+            "pm10": []
+        },
 
-    result = {}
-    for season, data in seasonal.items():
-        result[season] = {
-            "avg_pm25": calculate_average(data["pm25"]),
-            "avg_pm10": calculate_average(data["pm10"]),
+        "夏": {
+            "pm25": [],
+            "pm10": []
+        },
+
+        "秋": {
+            "pm25": [],
+            "pm10": []
+        },
+
+        "冬": {
+            "pm25": [],
+            "pm10": []
         }
+    }
+
+    # ==================================================
+    # 將資料分配到四季
+    # ==================================================
+    for r in records:
+
+        # 日期格式：
+        # 2025/01
+        #
+        # split("/")
+        # -> ["2025","01"]
+        #
+        month = r["date"].split("/")[-1]
+
+        # 找出季節
+        season = season_map.get(month, "")
+
+        # 找不到對應季節
+        if not season:
+
+            continue
+
+        # PM2.5 有資料
+        if r["pm25"] is not None:
+
+            seasonal[season]["pm25"].append(
+                r["pm25"]
+            )
+
+        # PM10 有資料
+        if r["pm10"] is not None:
+
+            seasonal[season]["pm10"].append(
+                r["pm10"]
+            )
+
+    # ==================================================
+    # 計算四季平均值
+    # ==================================================
+    result = {}
+
+    # 逐一處理春夏秋冬
+    for season, data in seasonal.items():
+
+        result[season] = {
+
+            # 計算 PM2.5 平均
+            "avg_pm25": calculate_average(
+                data["pm25"]
+            ),
+
+            # 計算 PM10 平均
+            "avg_pm10": calculate_average(
+                data["pm10"]
+            ),
+        }
+
+    # 回傳結果
     return result
 
 
+# ==================================================
+# 印出統計摘要
+#
+# 顯示：
+# 資料月份數
+# PM2.5 平均、最高、最低
+# PM10 平均、最高、最低
+# ==================================================
 def print_summary(summary, site):
-    """印出統計摘要。"""
-    print(f"\n===== {site} 空氣品質統計摘要 =====")
-    print(f"資料月份數：{summary.get('total_months', 0)}")
+
+    # 標題
+    print(
+        f"\n===== {site} 空氣品質統計摘要 ====="
+    )
+
+    # 顯示月份數
+    print(
+        f"資料月份數：{summary.get('total_months', 0)}"
+    )
+
+    # ==================================================
+    # PM2.5 統計結果
+    # ==================================================
     if "avg_pm25" in summary:
-        print(f"PM2.5  平均：{summary['avg_pm25']:.2f} μg/m³  "
-              f"最高：{summary['max_pm25']:.2f}  最低：{summary['min_pm25']:.2f}")
+
+        print(
+            f"PM2.5  平均：{summary['avg_pm25']:.2f} μg/m³  "
+            f"最高：{summary['max_pm25']:.2f}  "
+            f"最低：{summary['min_pm25']:.2f}"
+        )
+
+    # ==================================================
+    # PM10 統計結果
+    # ==================================================
     if "avg_pm10" in summary:
-        print(f"PM10   平均：{summary['avg_pm10']:.2f} μg/m³  "
-              f"最高：{summary['max_pm10']:.2f}  最低：{summary['min_pm10']:.2f}")
+
+        print(
+            f"PM10   平均：{summary['avg_pm10']:.2f} μg/m³  "
+            f"最高：{summary['max_pm10']:.2f}  "
+            f"最低：{summary['min_pm10']:.2f}"
+        )
+
+    # 分隔線
     print("=" * 38)
